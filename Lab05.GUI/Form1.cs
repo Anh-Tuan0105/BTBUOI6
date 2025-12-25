@@ -18,6 +18,8 @@ namespace Lab05.GUI
     {
         private readonly StudentService studentService = new StudentService();
         private readonly FacultyService facultyService = new FacultyService();
+
+        private string avatarFilePath = string.Empty;
         public Form1()
         {
             InitializeComponent();
@@ -44,14 +46,9 @@ namespace Lab05.GUI
         private void FillFalcultyCombobox(List<Faculty> listFacultys)
         {
             // Thêm dòng mặc định đầu tiên (tùy chọn, giống trong ảnh hướng dẫn)
-            // Lưu ý: new Faculty() có thể tạo ra dòng trống nếu không gán tên
-            listFacultys.Insert(0, new Faculty());
-
             this.cmbFaculty.DataSource = listFacultys;
             this.cmbFaculty.DisplayMember = "FacultyName";
             this.cmbFaculty.ValueMember = "FacultyID";
-
-            cmbFaculty.SelectedIndex = 1; // Chọn dòng đầu tiên làm mặc định    
         }
 
         private void BindGrid(List<Student> listStudent)
@@ -78,13 +75,11 @@ namespace Lab05.GUI
                 }
 
                 dgvStudent.Rows[index].Tag = item;
-                // Hiển thị Avatar (gọi hàm ShowAvatar)
-                //ShowAvatar(item.Avatar);
             }
         }
-        private void ShowAvatar(string ImageName)
+        private void ShowAvatar(string imageName)
         {
-            if (string.IsNullOrEmpty(ImageName))
+            if (string.IsNullOrEmpty(imageName))
             {
                 picAvatar.Image = null;
             }
@@ -92,9 +87,8 @@ namespace Lab05.GUI
             {
                 try
                 {
-                    // Lấy đường dẫn gốc của project (để tìm folder Images ngang hàng với code)
-                    string parentDirectory = Directory.GetParent(AppDomain.CurrentDomain.BaseDirectory).Parent.Parent.FullName;
-                    string imagePath = Path.Combine(parentDirectory, "Images", ImageName);
+                    string parentDirectory = Application.StartupPath; // Sửa theo ảnh: dùng StartupPath
+                    string imagePath = Path.Combine(parentDirectory, "Images", imageName);
 
                     if (File.Exists(imagePath))
                     {
@@ -103,7 +97,7 @@ namespace Lab05.GUI
                     }
                     else
                     {
-                        picAvatar.Image = null; // Ảnh không tồn tại trong folder
+                        picAvatar.Image = null;
                     }
                 }
                 catch
@@ -141,17 +135,51 @@ namespace Lab05.GUI
 
         private void btnUpload_Click(object sender, EventArgs e)
         {
-            OpenFileDialog dlg = new OpenFileDialog();
-            dlg.Filter = "Image Files|*.jpg;*.jpeg;*.png;*.bmp"; // Chỉ lấy file ảnh
-            dlg.Title = "Chọn ảnh đại diện";
-
-            if (dlg.ShowDialog() == DialogResult.OK)
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
             {
-                // Hiển thị ảnh lên PictureBox
-                picAvatar.Image = Image.FromFile(dlg.FileName);
+                openFileDialog.Filter = "Image Files (*.jpg; *.jpeg; *.png)|*.jpg; *.jpeg; *.png";
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    avatarFilePath = openFileDialog.FileName; // Lưu đường dẫn vào biến toàn cục
+                    picAvatar.Image = Image.FromFile(avatarFilePath);
+                }
+            }
+        }
 
-                // QUAN TRỌNG: Lưu đường dẫn file gốc vào Tag để lát nữa nút Save dùng để copy
-                picAvatar.Tag = dlg.FileName;
+        private string SaveAvatar(string sourceFilePath, string studentID)
+        {
+            try
+            {
+                string folderPath = Path.Combine(Application.StartupPath, "Images");
+                if (!Directory.Exists(folderPath))
+                {
+                    Directory.CreateDirectory(folderPath);
+                }
+
+                string fileExtension = Path.GetExtension(sourceFilePath);
+                string targetFilePath = Path.Combine(folderPath, $"{studentID}{fileExtension}");
+
+                // Logic copy file
+                if (File.Exists(sourceFilePath))
+                {
+                    // Nếu copy đè lên chính nó thì bỏ qua lỗi
+                    if (sourceFilePath != targetFilePath)
+                    {
+                        File.Copy(sourceFilePath, targetFilePath, true);
+                    }
+                }
+                else
+                {
+                    throw new FileNotFoundException($"Không tìm thấy file: {sourceFilePath}");
+                    // Có thể handle lỗi tùy ý
+                }
+
+                return $"{studentID}{fileExtension}";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error saving avatar: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return null;
             }
         }
 
@@ -159,62 +187,38 @@ namespace Lab05.GUI
         {
             try
             {
-                // 1. Kiểm tra dữ liệu nhập
                 if (txtID.Text == "" || txtName.Text == "" || txtScore.Text == "")
                 {
                     MessageBox.Show("Vui lòng nhập đầy đủ thông tin!");
                     return;
                 }
 
-                // 2. Xử lý Avatar (Copy ảnh vào thư mục Images của Project)
-                string avatarFileName = null; // Mặc định là null nếu không có ảnh
+                // Tìm sinh viên có sẵn hoặc tạo mới (Logic của user cũ, kết hợp logic ảnh)
+                var student = studentService.FindById(txtID.Text) ?? new Student();
 
-                // Kiểm tra xem có đường dẫn ảnh trong Tag không (đã chọn ảnh hoặc click từ grid)
-                if (picAvatar.Tag != null && !string.IsNullOrEmpty(picAvatar.Tag.ToString()))
+                // Update thông tin
+                student.StudentID = txtID.Text;
+                student.FullName = txtName.Text;
+                student.AverageScore = float.Parse(txtScore.Text);
+                student.FacultyID = int.Parse(cmbFaculty.SelectedValue.ToString());
+
+                // --- Xử lý LƯU ẢNH (Theo Ảnh 3) ---
+                if (!string.IsNullOrEmpty(avatarFilePath)) // Nếu có file ảnh mới được chọn
                 {
-                    string sourcePath = picAvatar.Tag.ToString();
-
-                    // Lấy thư mục gốc của Project để lưu ảnh (thư mục Images)
-                    string parentDirectory = Directory.GetParent(AppDomain.CurrentDomain.BaseDirectory).Parent.Parent.FullName;
-                    string imageFolder = Path.Combine(parentDirectory, "Images");
-
-                    // Tạo thư mục nếu chưa có
-                    if (!Directory.Exists(imageFolder)) Directory.CreateDirectory(imageFolder);
-
-                    // Đặt tên file ảnh theo Mã Sinh Viên (để tránh trùng lặp)
-                    string fileExtension = Path.GetExtension(sourcePath);
-                    avatarFileName = txtID.Text + fileExtension; // Ví dụ: 123456.jpg
-
-                    string destPath = Path.Combine(imageFolder, avatarFileName);
-
-                    // Copy file (ghi đè nếu file đã tồn tại)
-                    // Chỉ copy nếu đường dẫn nguồn KHÁC đường dẫn đích (tránh lỗi copy file vào chính nó)
-                    if (sourcePath != destPath)
+                    string avatarFileName = SaveAvatar(avatarFilePath, txtID.Text);
+                    if (!string.IsNullOrEmpty(avatarFileName))
                     {
-                        File.Copy(sourcePath, destPath, true);
+                        student.Avatar = avatarFileName;
                     }
                 }
+                // ----------------------------------
 
-                // 3. Tạo đối tượng Student
-                Student s = new Student()
-                {
-                    StudentID = txtID.Text,
-                    FullName = txtName.Text,
-                    AverageScore = float.Parse(txtScore.Text),
-                    FacultyID = int.Parse(cmbFaculty.SelectedValue.ToString()),
-                    Avatar = avatarFileName // Lưu tên file ảnh (ngắn gọn) vào DB
-                };
-
-                // Xử lý Chuyên ngành (Major) nếu có
-                // s.MajorID = ... (Tùy logic bài toán của bạn nếu có combo Major)
-
-                // 4. Gọi Service để lưu vào DB
-                studentService.InsertUpdate(s);
+                studentService.InsertUpdate(student);
 
                 MessageBox.Show("Lưu dữ liệu thành công!");
-
-                // 5. Load lại dữ liệu lên Grid và xóa form nhập
                 BindGrid(studentService.GetAll());
+
+                // Clear data và reset avatar path (Theo Ảnh 3)
                 ResetForm();
             }
             catch (Exception ex)
@@ -230,7 +234,7 @@ namespace Lab05.GUI
             txtName.Text = "";
             txtScore.Text = "";
             picAvatar.Image = null;
-            picAvatar.Tag = null;
+            avatarFilePath = string.Empty; // Reset đường dẫn file tạm
             txtID.Focus();
         }
 
@@ -238,14 +242,12 @@ namespace Lab05.GUI
         {
             try
             {
-                // Kiểm tra xem đã nhập/chọn MSSV chưa
                 if (txtID.Text == "")
                 {
                     MessageBox.Show("Vui lòng chọn sinh viên cần xóa!");
                     return;
                 }
 
-                // Tìm sinh viên để lấy tên ảnh (phục vụ việc xóa file ảnh - tùy chọn)
                 var student = studentService.FindById(txtID.Text);
                 if (student == null)
                 {
@@ -253,28 +255,12 @@ namespace Lab05.GUI
                     return;
                 }
 
-                // Hỏi xác nhận xóa
                 DialogResult result = MessageBox.Show($"Bạn có chắc muốn xóa sinh viên {student.FullName}?",
                                                       "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (result == DialogResult.Yes)
                 {
-                    // 1. Xóa trong Database
                     studentService.Delete(txtID.Text);
-
-                    // 2. (Tùy chọn) Xóa file ảnh trong thư mục Images để tiết kiệm dung lượng
-                    if (!string.IsNullOrEmpty(student.Avatar))
-                    {
-                        string parentDirectory = Directory.GetParent(AppDomain.CurrentDomain.BaseDirectory).Parent.Parent.FullName;
-                        string imagePath = Path.Combine(parentDirectory, "Images", student.Avatar);
-                        if (File.Exists(imagePath))
-                        {
-                            File.Delete(imagePath);
-                        }
-                    }
-
                     MessageBox.Show("Xóa thành công!");
-
-                    // 3. Load lại Grid
                     BindGrid(studentService.GetAll());
                     ResetForm();
                 }
@@ -287,40 +273,33 @@ namespace Lab05.GUI
 
         private void dgvStudent_CellClick(object sender, DataGridViewCellEventArgs e)
         {
-            // Kiểm tra dòng hợp lệ
             if (e.RowIndex == -1) return;
-
-            // Lấy dòng đang chọn
             DataGridViewRow row = dgvStudent.Rows[e.RowIndex];
-
-            // Lấy đối tượng Student được giấu trong Tag ra
             if (row.Tag is Student item)
             {
-                // 1. Đổ dữ liệu lên các ô nhập liệu
                 txtID.Text = item.StudentID;
                 txtName.Text = item.FullName;
                 txtScore.Text = item.AverageScore.ToString();
-
-                // Chọn khoa trên ComboBox
                 if (item.Faculty != null)
-                    cmbFaculty.SelectedValue = item.FacultyID; // Hoặc gán cmbFaculty.Text = item.Faculty.FacultyName;
+                    cmbFaculty.SelectedValue = item.FacultyID;
 
-                // 2. Hiển thị ảnh (Lấy trực tiếp từ thuộc tính Avatar của đối tượng)
                 ShowAvatar(item.Avatar);
 
-                // (Tùy chọn) Lưu đường dẫn ảnh vào Tag của PictureBox để xử lý Lưu sau này
-                if (!string.IsNullOrEmpty(item.Avatar))
-                {
-                    // Code xử lý đường dẫn như cũ...
-                    string parentDirectory = Directory.GetParent(AppDomain.CurrentDomain.BaseDirectory).Parent.Parent.FullName;
-                    string imagePath = Path.Combine(parentDirectory, "Images", item.Avatar);
-                    picAvatar.Tag = imagePath;
-                }
-                else
-                {
-                    picAvatar.Tag = "";
-                }
+                // Reset avatarFilePath khi click chọn sinh viên khác để tránh lưu nhầm ảnh cũ
+                // nếu người dùng nhấn Save mà không chọn ảnh mới
+                avatarFilePath = string.Empty;
             }
+        }
+
+        private void đăngKýChuyênNgànhToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var f = new frmRegister();
+            f.ShowDialog();
+            // 1. Lấy lại danh sách sinh viên mới nhất từ DB (đã có MajorID mới cập nhật)
+            var listStudents = studentService.GetAll();
+
+            // 2. Đổ lại dữ liệu vào GridView để cập nhật tên chuyên ngành
+            BindGrid(listStudents);
         }
     }
 }
