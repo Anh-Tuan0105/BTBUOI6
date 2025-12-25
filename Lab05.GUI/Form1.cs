@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -290,7 +291,22 @@ namespace Lab05.GUI
                 avatarFilePath = string.Empty;
             }
         }
+        private void txtSearch_TextChanged(object sender, EventArgs e)
+        {
+            // Lấy từ khóa và chuyển về chữ thường
+            string keyword = txtSearch.Text.Trim().ToLower();
 
+            // Lấy danh sách toàn bộ sinh viên (hoặc danh sách hiện tại đang có)
+            var listStudents = studentService.GetAll();
+
+            // Lọc theo MSSV hoặc Tên (Contains: chứa từ khóa)
+            var searchResult = listStudents.Where(s =>
+                s.StudentID.ToLower().Contains(keyword) ||
+                s.FullName.ToLower().Contains(keyword)).ToList();
+
+            // Hiển thị kết quả
+            BindGrid(searchResult);
+        }
         private void đăngKýChuyênNgànhToolStripMenuItem_Click(object sender, EventArgs e)
         {
             var f = new frmRegister();
@@ -300,6 +316,166 @@ namespace Lab05.GUI
 
             // 2. Đổ lại dữ liệu vào GridView để cập nhật tên chuyên ngành
             BindGrid(listStudents);
+        }
+
+        private void btnReport_Click(object sender, EventArgs e)
+        {
+            var listStudents = studentService.GetAll();
+
+            // Sử dụng LINQ để Group theo tên Khoa và đếm
+            var report = listStudents
+                .GroupBy(s => s.Faculty.FacultyName)
+                .Select(g => new
+                {
+                    Khoa = g.Key,
+                    SoLuong = g.Count()
+                })
+                .ToList();
+
+            string message = "Thống kê số lượng sinh viên:\n\n";
+            foreach (var item in report)
+            {
+                message += $"- Khoa {item.Khoa}: {item.SoLuong} sinh viên\n";
+            }
+
+            MessageBox.Show(message, "Thống kê");
+        }
+
+        private void btnPrintCard_Click(object sender, EventArgs e)
+        {
+            // 0. Kiểm tra dữ liệu
+            if (txtID.Text == "" || txtName.Text == "")
+            {
+                MessageBox.Show("Vui lòng chọn sinh viên cần in thẻ!");
+                return;
+            }
+
+            // 1. LẤY THÔNG TIN CHUYÊN NGÀNH
+            var student = studentService.FindById(txtID.Text);
+            string majorName = "Chưa đăng ký";
+            if (student != null && student.Major != null)
+            {
+                majorName = student.Major.Name;
+            }
+
+            // 2. THIẾT LẬP KÍCH THƯỚC "KHỦNG" (HD 800x500)
+            int cardW = 800;
+            int cardH = 500;
+            Bitmap card = new Bitmap(cardW, cardH);
+            Graphics g = Graphics.FromImage(card);
+
+            // Bật chế độ vẽ chất lượng cao nhất (AntiAlias)
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+
+            // 3. VẼ NỀN & KHUNG
+            g.Clear(Color.White); // Nền trắng
+                                  // Vẽ viền đôi cho đẹp (Viền xanh đậm 10px)
+            //g.DrawRectangle(new Pen(Color.DarkBlue, 10), 0, 0, cardW, cardH);
+
+            // 4. VẼ TIÊU ĐỀ (Font to hơn)
+            // Logo trường hoặc tên trường
+            using (Font fontSchool = new Font("Arial", 18, FontStyle.Bold))
+            {
+                g.DrawString("ĐẠI HỌC HUTECH", fontSchool, Brushes.DarkBlue, new PointF(280, 30));
+            }
+
+            // Chữ THẺ SINH VIÊN
+            using (Font fontTitle = new Font("Arial", 26, FontStyle.Bold))
+            {
+                g.DrawString("THẺ SINH VIÊN", fontTitle, Brushes.Red, new PointF(300, 70));
+            }
+
+            // 5. VẼ ẢNH ĐẠI DIỆN (Size lớn: 200x260)
+            // Tọa độ vẽ: Cách trái 40, Cách trên 130
+            Rectangle imageRect = new Rectangle(40, 130, 200, 260);
+
+            if (picAvatar.Image != null)
+            {
+                g.DrawImage(picAvatar.Image, imageRect);
+                g.DrawRectangle(new Pen(Color.Black, 2), imageRect); // Viền đen quanh ảnh
+            }
+            else
+            {
+                g.DrawRectangle(Pens.Gray, imageRect);
+                g.DrawString("No Image", new Font("Arial", 14), Brushes.Gray, new PointF(80, 230));
+            }
+
+            // 6. VẼ THÔNG TIN CHI TIẾT
+            // Dời tọa độ X sang 270 để né cái ảnh to
+            int infoX = 270;
+            int topY = 150;   // Dòng đầu tiên bắt đầu từ Y=150
+            int gap = 65;     // Khoảng cách giữa các dòng (giãn rộng ra cho thoáng)
+
+            using (Font fontLabel = new Font("Arial", 16, FontStyle.Bold))   // Font nhãn size 16
+            using (Font fontContent = new Font("Arial", 16, FontStyle.Regular)) // Font nội dung size 16
+            {
+                // -- Họ Tên --
+                g.DrawString("Họ tên:", fontLabel, Brushes.Black, new PointF(infoX, topY));
+                g.DrawString(txtName.Text.ToUpper(), fontContent, Brushes.DarkBlue, new PointF(infoX + 110, topY));
+
+                // -- MSSV --
+                g.DrawString("MSSV:", fontLabel, Brushes.Black, new PointF(infoX, topY + gap));
+                g.DrawString(txtID.Text, fontContent, Brushes.Red, new PointF(infoX + 110, topY + gap));
+
+                // -- Khoa --
+                g.DrawString("Khoa:", fontLabel, Brushes.Black, new PointF(infoX, topY + gap * 2));
+                g.DrawString(cmbFaculty.Text, fontContent, Brushes.Black, new PointF(infoX + 110, topY + gap * 2));
+
+                // -- Chuyên Ngành --
+                g.DrawString("C.Ngành:", fontLabel, Brushes.Black, new PointF(infoX, topY + gap * 3));
+                g.DrawString(majorName, fontContent, Brushes.Black, new PointF(infoX + 110, topY + gap * 3));
+            }
+
+            // Trang trí: Mã vạch giả hoặc đường kẻ dưới cùng
+            g.FillRectangle(Brushes.DarkBlue, 0, 460, 800, 40); // Một dải màu xanh dưới đáy thẻ
+
+            // 7. LƯU FILE
+            SaveFileDialog sfd = new SaveFileDialog();
+            sfd.Filter = "PNG Image|*.png|JPEG Image|*.jpg";
+            sfd.FileName = txtID.Text + "_TheSV_HD"; // Đặt tên file gợi ý
+
+            if (sfd.ShowDialog() == DialogResult.OK)
+            {
+                string ext = Path.GetExtension(sfd.FileName).ToLower();
+                ImageFormat format = ImageFormat.Png;
+                if (ext == ".jpg" || ext == ".jpeg") format = ImageFormat.Jpeg;
+
+                card.Save(sfd.FileName, format);
+
+                // Mở ảnh lên xem ngay
+                try { System.Diagnostics.Process.Start("explorer.exe", sfd.FileName); } catch { }
+            }
+        }
+
+        private void btnShowSkills_Click(object sender, EventArgs e)
+        {
+            // 1. Kiểm tra xem người dùng đã chọn sinh viên chưa
+            if (txtID.Text == "" || txtName.Text == "" || txtScore.Text == "")
+            {
+                MessageBox.Show("Vui lòng chọn một sinh viên có đầy đủ điểm số!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                // 2. Lấy dữ liệu từ các ô nhập liệu
+                string name = txtName.Text;
+                string faculty = cmbFaculty.Text;
+                double score = double.Parse(txtScore.Text);
+
+                // 3. Khởi tạo Form biểu đồ và truyền dữ liệu sang
+                // (Đây là lúc Constructor bên kia hoạt động)
+                frmRadarChart frm = new frmRadarChart(name, score, faculty);
+
+                // 4. Hiển thị Form lên
+                frm.ShowDialog(); // Dùng ShowDialog để người dùng phải tắt biểu đồ mới quay lại được Form chính
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi dữ liệu điểm số: " + ex.Message);
+            }
         }
     }
 }

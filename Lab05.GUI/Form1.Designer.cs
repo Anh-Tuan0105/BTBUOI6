@@ -53,6 +53,11 @@
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.chứcNăngToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.đăngKýChuyênNgànhToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.txtSearch = new System.Windows.Forms.TextBox();
+            this.label7 = new System.Windows.Forms.Label();
+            this.btnReport = new System.Windows.Forms.Button();
+            this.btnPrintCard = new System.Windows.Forms.Button();
+            this.btnShowSkills = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.picAvatar)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgvStudent)).BeginInit();
@@ -87,9 +92,9 @@
             this.groupBox1.Controls.Add(this.label2);
             this.groupBox1.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.groupBox1.ForeColor = System.Drawing.Color.Blue;
-            this.groupBox1.Location = new System.Drawing.Point(12, 56);
+            this.groupBox1.Location = new System.Drawing.Point(12, 93);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(378, 430);
+            this.groupBox1.Size = new System.Drawing.Size(378, 393);
             this.groupBox1.TabIndex = 1;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Thông Tin Sinh Viên";
@@ -226,11 +231,11 @@
             this.Column3,
             this.Column4,
             this.Column5});
-            this.dgvStudent.Location = new System.Drawing.Point(396, 64);
+            this.dgvStudent.Location = new System.Drawing.Point(396, 93);
             this.dgvStudent.Name = "dgvStudent";
             this.dgvStudent.ReadOnly = true;
             this.dgvStudent.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dgvStudent.Size = new System.Drawing.Size(590, 422);
+            this.dgvStudent.Size = new System.Drawing.Size(590, 393);
             this.dgvStudent.TabIndex = 2;
             this.dgvStudent.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvStudent_CellClick);
             // 
@@ -305,11 +310,64 @@
             this.đăngKýChuyênNgànhToolStripMenuItem.Text = "Đăng Ký Chuyên Ngành";
             this.đăngKýChuyênNgànhToolStripMenuItem.Click += new System.EventHandler(this.đăngKýChuyênNgànhToolStripMenuItem_Click);
             // 
+            // txtSearch
+            // 
+            this.txtSearch.Location = new System.Drawing.Point(473, 66);
+            this.txtSearch.Name = "txtSearch";
+            this.txtSearch.Size = new System.Drawing.Size(244, 20);
+            this.txtSearch.TabIndex = 5;
+            this.txtSearch.TextChanged += new System.EventHandler(this.txtSearch_TextChanged);
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label7.Location = new System.Drawing.Point(392, 66);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(75, 21);
+            this.label7.TabIndex = 6;
+            this.label7.Text = "Tìm Kiếm";
+            // 
+            // btnReport
+            // 
+            this.btnReport.Location = new System.Drawing.Point(723, 65);
+            this.btnReport.Name = "btnReport";
+            this.btnReport.Size = new System.Drawing.Size(81, 22);
+            this.btnReport.TabIndex = 7;
+            this.btnReport.Text = "Thống Kê";
+            this.btnReport.UseVisualStyleBackColor = true;
+            this.btnReport.Click += new System.EventHandler(this.btnReport_Click);
+            // 
+            // btnPrintCard
+            // 
+            this.btnPrintCard.Location = new System.Drawing.Point(810, 65);
+            this.btnPrintCard.Name = "btnPrintCard";
+            this.btnPrintCard.Size = new System.Drawing.Size(84, 22);
+            this.btnPrintCard.TabIndex = 8;
+            this.btnPrintCard.Text = "In Thẻ SV";
+            this.btnPrintCard.UseVisualStyleBackColor = true;
+            this.btnPrintCard.Click += new System.EventHandler(this.btnPrintCard_Click);
+            // 
+            // btnShowSkills
+            // 
+            this.btnShowSkills.Location = new System.Drawing.Point(900, 64);
+            this.btnShowSkills.Name = "btnShowSkills";
+            this.btnShowSkills.Size = new System.Drawing.Size(86, 23);
+            this.btnShowSkills.TabIndex = 9;
+            this.btnShowSkills.Text = "Biểu Đồ";
+            this.btnShowSkills.UseVisualStyleBackColor = true;
+            this.btnShowSkills.Click += new System.EventHandler(this.btnShowSkills_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(998, 511);
+            this.Controls.Add(this.btnShowSkills);
+            this.Controls.Add(this.btnPrintCard);
+            this.Controls.Add(this.btnReport);
+            this.Controls.Add(this.label7);
+            this.Controls.Add(this.txtSearch);
             this.Controls.Add(this.chkUnregisterMajor);
             this.Controls.Add(this.dgvStudent);
             this.Controls.Add(this.groupBox1);
@@ -357,6 +415,11 @@
         private System.Windows.Forms.MenuStrip menuStrip1;
         private System.Windows.Forms.ToolStripMenuItem chứcNăngToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem đăngKýChuyênNgànhToolStripMenuItem;
+        private System.Windows.Forms.TextBox txtSearch;
+        private System.Windows.Forms.Label label7;
+        private System.Windows.Forms.Button btnReport;
+        private System.Windows.Forms.Button btnPrintCard;
+        private System.Windows.Forms.Button btnShowSkills;
     }
 }
 
